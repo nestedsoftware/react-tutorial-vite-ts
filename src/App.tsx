@@ -58,8 +58,6 @@ const createGameLogic: StateCreator<GameStore> = (set, get) => {
     set({currentMove: nextMove})
   }
 
-  const isXTurn = (currentMove: number) => currentMove % 2 === 0;
-
   const calculateWinner = (squares: square[]) => {
     const lines = [
       [0, 1, 2],
@@ -79,6 +77,8 @@ const createGameLogic: StateCreator<GameStore> = (set, get) => {
     }
     return null;
   };
+
+  const isXTurn = (currentMove: number) => currentMove % 2 === 0;
 
   const getCopyOfSquares = () => {
     let squares = get().squares;
