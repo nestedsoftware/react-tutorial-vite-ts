@@ -29,6 +29,35 @@ const createGameLogic: StateCreator<GameStore> = (set, get) => {
     return status;
   }
 
+  const handleClick = (i : number) => {
+    const squaresCopy = getCopyOfSquares();
+    const currentMove = get().currentMove;
+ 
+    if (calculateWinner(squaresCopy) || squaresCopy[i]) {
+      return;
+    }
+    if (isXTurn(currentMove)) {
+      squaresCopy[i] = ['X', currentMove];
+    } else {
+      squaresCopy[i] = ['O', currentMove];
+    }
+
+    set({ squares: squaresCopy, currentMove: currentMove+1, lastMoveInHistory: currentMove+1 })
+  };
+
+  const currentValue = (i: number) => {
+    const currentMove: number = get().currentMove;
+    const currentSquare = get().squares[i];
+    if (currentSquare == null || currentSquare[1] >= currentMove) {
+      return null;
+    }
+    return currentSquare[0];
+  }
+
+  const jumpTo = (nextMove: number) => {
+    set({currentMove: nextMove})
+  }
+
   const isXTurn = (currentMove: number) => currentMove % 2 === 0;
 
   const calculateWinner = (squares: square[]) => {
@@ -56,7 +85,6 @@ const createGameLogic: StateCreator<GameStore> = (set, get) => {
     const lastMoveInHistory = get().lastMoveInHistory;
     const currentMove = get().currentMove;
     if (lastMoveInHistory > currentMove) {
-      set({lastMoveInHistory: currentMove});
       return squares.map(square => {
         if (square !=null) {
           const squareMoveIndex = square[1];
@@ -71,35 +99,6 @@ const createGameLogic: StateCreator<GameStore> = (set, get) => {
 
     return [...squares];
   };
-
-  const handleClick = (i : number) => {
-    const squaresCopy = getCopyOfSquares();
-    const currentMove = get().currentMove;
-
-    if (calculateWinner(squaresCopy) || squaresCopy[i]) {
-      return;
-    }
-    if (isXTurn(currentMove)) {
-      squaresCopy[i] = ['X', currentMove];
-    } else {
-      squaresCopy[i] = ['O', currentMove];
-    }
-
-    set({ squares: squaresCopy, currentMove: currentMove+1, lastMoveInHistory: currentMove+1 })
-  };
-
-  const currentValue = (i: number) => {
-    const currentMove: number = get().currentMove;
-    const currentSquare = get().squares[i];
-    if (currentSquare == null || currentSquare[1] >= currentMove) {
-      return null;
-    }
-    return currentSquare[0];
-  }
-
-  const jumpTo = (nextMove: number) => {
-    set({currentMove: nextMove})
-  }
 
   return {
     squares: Array(9).fill(null),
@@ -154,7 +153,6 @@ function Board() {
 export default function Game() {
   const { lastMoveInHistory, jumpTo } = useStore();
 
-  
   const moves = [...Array(lastMoveInHistory+1).keys()].map(move => {
     let description;
     if (move > 0) {
