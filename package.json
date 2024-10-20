@@ -10,7 +10,8 @@
   "dependencies": {
     "browserslist": "^4.24.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "zustand": "5.0.0-rc.2"
   },
   "browserslist": [
     ">0.2%",

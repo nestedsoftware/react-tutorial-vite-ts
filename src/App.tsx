@@ -1,85 +1,161 @@
-import { useState } from 'react';
+import { create } from 'zustand';
+import type { StateCreator } from 'zustand';
 
-type SquareParams = {
-  value: string,
-  onSquareClick: () => void
+type square = [string, number] | null;
+
+interface GameStore {
+  squares: square[];
+  currentMove: number;
+  lastMoveInHistory: number;
+  status: () => string;
+  handleClick(i: number): void;
+  currentValue(i: number): string | null;
+  jumpTo(i: number): void;
 }
 
-function Square({ value, onSquareClick }: SquareParams) {
+const createGameLogic: StateCreator<GameStore> = (set, get) => {
+  const status = () => {
+    const squares = get().squares;
+    const currentMove = get().currentMove;
+  
+    const winner = calculateWinner(squares);
+    let status;
+    if (winner) {
+      status = 'Winner: ' + winner;
+    } else {
+      status = 'Next player: ' + (isXTurn(currentMove) ? 'X' : 'O');
+    }    
+
+    return status;
+  }
+
+  const isXTurn = (currentMove: number) => currentMove % 2 === 0;
+
+  const calculateWinner = (squares: square[]) => {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (squares[a] && squares[b] && squares[c] && squares[a][0] === squares[b][0] && squares[a][0] === squares[c][0]) {
+        return squares[a][0];
+      }
+    }
+    return null;
+  };
+
+  const getCopyOfSquares = () => {
+    let squares = get().squares;
+    const lastMoveInHistory = get().lastMoveInHistory;
+    const currentMove = get().currentMove;
+    if (lastMoveInHistory > currentMove) {
+      set({lastMoveInHistory: currentMove});
+      return squares.map(square => {
+        if (square !=null) {
+          const squareMoveIndex = square[1];
+          if (squareMoveIndex >= currentMove) {
+            return null;
+          }
+          return square;
+        }
+        return null;
+      });
+    }
+
+    return [...squares];
+  };
+
+  const handleClick = (i : number) => {
+    const squaresCopy = getCopyOfSquares();
+    const currentMove = get().currentMove;
+
+    if (calculateWinner(squaresCopy) || squaresCopy[i]) {
+      return;
+    }
+    if (isXTurn(currentMove)) {
+      squaresCopy[i] = ['X', currentMove];
+    } else {
+      squaresCopy[i] = ['O', currentMove];
+    }
+
+    set({ squares: squaresCopy, currentMove: currentMove+1, lastMoveInHistory: currentMove+1 })
+  };
+
+  const currentValue = (i: number) => {
+    const currentMove: number = get().currentMove;
+    const currentSquare = get().squares[i];
+    if (currentSquare == null || currentSquare[1] >= currentMove) {
+      return null;
+    }
+    return currentSquare[0];
+  }
+
+  const jumpTo = (nextMove: number) => {
+    set({currentMove: nextMove})
+  }
+
+  return {
+    squares: Array(9).fill(null),
+    currentMove: 0,
+    lastMoveInHistory: 0,
+    status: () => status(),
+    handleClick: (i: number) => handleClick(i),
+    currentValue: (i: number) => currentValue(i),
+    jumpTo: (i: number) => jumpTo(i)  
+  }
+
+};
+
+const useStore = create<GameStore>((...args) => ({
+  ...createGameLogic(...args)
+})); 
+
+function Square({index}: {index: number}) {
+  const { currentValue, handleClick } = useStore();
   return (
-    <button className="square" onClick={onSquareClick}>
-      {value}
+    <button className="square" onClick={() => handleClick(index)}>
+      {currentValue(index)}
     </button>
   );
 }
 
-type BoardParams = {
-  xIsNext: boolean,
-  squares: string[],
-  onPlay: (nextSquares: string[]) => void
-} 
-
-function Board({ xIsNext, squares, onPlay }: BoardParams) {
-  function handleClick(i: number) {
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    const nextSquares = squares.slice();
-    if (xIsNext) {
-      nextSquares[i] = 'X';
-    } else {
-      nextSquares[i] = 'O';
-    }
-    onPlay(nextSquares);
-  }
-
-  const winner = calculateWinner(squares);
-  let status;
-  if (winner) {
-    status = 'Winner: ' + winner;
-  } else {
-    status = 'Next player: ' + (xIsNext ? 'X' : 'O');
-  }
+function Board() {
+  const { status } = useStore();
 
   return (
     <>
-      <div className="status">{status}</div>
+      <div className="status">{status()}</div>
       <div className="board-row">
-        <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
-        <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
-        <Square value={squares[2]} onSquareClick={() => handleClick(2)} />
+        <Square index={0} />
+        <Square index={1} />
+        <Square index={2} />
       </div>
       <div className="board-row">
-        <Square value={squares[3]} onSquareClick={() => handleClick(3)} />
-        <Square value={squares[4]} onSquareClick={() => handleClick(4)} />
-        <Square value={squares[5]} onSquareClick={() => handleClick(5)} />
+        <Square index={3} />
+        <Square index={4} />
+        <Square index={5}/>
       </div>
       <div className="board-row">
-        <Square value={squares[6]} onSquareClick={() => handleClick(6)} />
-        <Square value={squares[7]} onSquareClick={() => handleClick(7)} />
-        <Square value={squares[8]} onSquareClick={() => handleClick(8)} />
+        <Square index={6} />
+        <Square index={7} />
+        <Square index={8} />
       </div>
     </>
   );
 }
 
 export default function Game() {
-  const [history, setHistory] = useState([Array(9).fill(null)]);
-  const [currentMove, setCurrentMove] = useState(0);
-  const xIsNext: boolean = currentMove % 2 === 0;
-  const currentSquares = history[currentMove];
+  const { lastMoveInHistory, jumpTo } = useStore();
 
-  function handlePlay(nextSquares: string[]) {
-    const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-    setHistory(nextHistory);
-    setCurrentMove(nextHistory.length - 1);
-  }
-
-  function jumpTo(nextMove: number) {
-    setCurrentMove(nextMove);
-  }
-
-  const moves = history.map((_, move) => {
+  
+  const moves = [...Array(lastMoveInHistory+1).keys()].map(move => {
     let description;
     if (move > 0) {
       description = 'Go to move #' + move;
@@ -96,7 +172,7 @@ export default function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        <Board/>
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -105,22 +181,3 @@ export default function Game() {
   );
 }
 
-function calculateWinner(squares: string[]) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
-    }
-  }
-  return null;
-}
